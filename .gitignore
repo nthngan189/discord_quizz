@@ -5,3 +5,7 @@
 !.gitignore
 !README.md
 !quizz.py
+!index.py
+!requirements.txt
+!run_menu.py
+!ultils.py

@@ -1,0 +1,7 @@
+requests==2.32.4
+screeninfo==0.8.1
+pillow==11.2.1
+google-genai==1.20.0
+selenium==4.33.0
+blinker==1.7.0
+setuptools==80.9.0
