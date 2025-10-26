@@ -1131,7 +1131,7 @@ class BrowserManager:                                                           
         self.tele_bot = None
         self.matrix: list[list[str | None]] = [[None]]
         self.extensions = []
-        self.executor = None
+        #self.executor = None
 
         # lấy kích thước màn hình
         monitors = get_monitors()
@@ -1529,20 +1529,20 @@ class BrowserManager:                                                           
             number_profiles=len(queue)
         )
 
-        self.executor = ThreadPoolExecutor(max_workers=max_concurrent_profiles)
-        while len(queue) > 0:
-            profile = queue[0]
-            profile_name = profile['profile_name']
-            row, col = self._get_position(profile_name)
+        with ThreadPoolExecutor(max_workers=max_concurrent_profiles) as executor:
+            while len(queue) > 0:
+                profile = queue[0]
+                profile_name = profile['profile_name']
+                row, col = self._get_position(profile_name)
 
-            if row is not None and col is not None:
-                queue.pop(0)
-                self.executor.submit(self.run_browser, profile, row, col)
-                # Thời gian chờ mở profile kế
-                Utility.wait_time(delay_between_profiles, True)
-            else:
-                # Thời gian chờ check lại
-                Utility.wait_time(10, True)
+                if row is not None and col is not None:
+                    queue.pop(0)
+                    executor.submit(self.run_browser, profile, row, col)
+                    # Thời gian chờ mở profile kế
+                    Utility.wait_time(delay_between_profiles, True)
+                else:
+                    # Thời gian chờ check lại
+                    Utility.wait_time(10, True)
 
     def run_stop(self, profiles: list[dict]):
         '''
