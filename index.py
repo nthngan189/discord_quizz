@@ -9,6 +9,7 @@ import asyncio
 import os
 import re
 import threading
+import queue
 from dotenv import load_dotenv
 load_dotenv()
 
@@ -25,6 +26,8 @@ BOT_ID = int(Utility.read_config('QUIZ_BOT_ID')[0])
 
 # ====== THIẾT LẬP TRÌNH DUYỆT ======
 driverList = []
+worker_queues = []
+worker_queues_lock = threading.Lock()
 class Setup:
     def __init__(self, node: Node, profile) -> None:
         self.node = node
@@ -39,6 +42,7 @@ class Auto:
         self.driver = node._driver
         self.node = node
         self.profile_name = profile.get('profile_name')
+        self.task_queue = queue.Queue()
     def is_login(self):
         user_name = self.node.get_text(By.XPATH, '//div[contains(@class, "panelTitleContainer")]')
         if user_name:
@@ -47,25 +51,51 @@ class Auto:
         else:
             self.node.log(f'Chưa login, comfirm login')
         return False
-    
+    def task_worker(self, answer):
+        '''
+        Hàm này chạy BÊN TRONG thread của worker,
+        chỉ xử lý cho driver của riêng nó.
+        Hàm này sẽ click vào đáp án của quizz.
+        :param answer: Đáp án cần click 1/2/3/4
+        '''
+        try:
+            answer = int(answer)
+            elm = self.node.find_all(By.XPATH, '//button[contains(@class,"colorBrand__201d5 sizeSmall__201d5")]')
+            if elm and len(elm) >= answer:
+                elm[answer - 1].click()
+                self.node.log(f"Đã click vào đáp án: {answer}")
+        except Exception as e:
+            self.node.log(f"Lỗi khi click vào đáp án: {e}")
+
     def _run(self):
         self.node.go_to(f'https://discord.com/channels/{SERVER_ID}/{CHANNEL_ID}', method="get")
         Utility.wait_time(10)
-        if self.is_login():
-            profiles_list = [self.driver, self.profile_name]
-            driverList.append(profiles_list)
-            return
-        else:
+        if not self.is_login():
             self.node.log('Vui lòng đăng nhập trong 60s...')
             Utility.wait_time(60)
             if not self.is_login():
                 return
+        # Đăng ký worker cho node này
+        with worker_queues_lock:
+            worker_queues.append(self.task_queue)
+        # Bắt đầu chờ task
+        while True:
+            try:
+                # Chờ task (hàm này BLOCKING, thread sẽ ngủ ở đây)
+                answer_task = self.task_queue.get()
+                # Chạy task trong thread của worker
+                self.task_worker(answer_task)
+                # Đánh dấu task đã hoàn thành
+                self.task_queue.task_done()
+            except Exception as e:
+                self.node.log(f"Lỗi nghiêm trọng trong worker loop: {e}")
+            
             
 
 
 
 
-# ====== CẤU TRÚC CHÍNH ======
+# ====== CẤU TRÚC HÀM CHÍNH ======
 def click_quiz(answer):
     '''
     Hàm này sẽ click vào đáp án của quizz.
@@ -91,7 +121,10 @@ async def handle_quiz(author,question, description = None):
         answer = await ask_gpt(question, desc_final)
         if answer:
             print(f"\n ** Đáp án: --> {answer}\n")
-            await asyncio.to_thread(click_quiz,answer[0])  # Giả sử đáp án là ký tự đầu tiên (A/B/C/D hoặc 1/2/3/4)
+            task_to_send = answer[0]
+            with worker_queues_lock:
+                for queue in worker_queues:
+                    queue.put(task_to_send)
         else:
             print("Lỗi!")
     else:
@@ -100,6 +133,10 @@ async def handle_quiz(author,question, description = None):
         answer = await ask_gpt(question)
         if answer:
             print(f"\n ** Đáp án: --> {answer}\n")
+            task_to_send = answer[0]
+            with worker_queues_lock:
+                for queue in worker_queues:
+                    queue.put(task_to_send)
         else:
             print("Lỗi!")
     await asyncio.sleep(1)
