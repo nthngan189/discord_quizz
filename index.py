@@ -83,12 +83,16 @@ class Auto:
             try:
                 # Chờ task (hàm này BLOCKING, thread sẽ ngủ ở đây)
                 answer_task = self.task_queue.get()
+                if answer_task is None:
+                    self.node.log("Nhận tín hiệu dừng worker.")
+                    break
                 # Chạy task trong thread của worker
                 self.task_worker(answer_task)
                 # Đánh dấu task đã hoàn thành
                 self.task_queue.task_done()
             except Exception as e:
                 self.node.log(f"Lỗi nghiêm trọng trong worker loop: {e}")
+                break
             
             
 

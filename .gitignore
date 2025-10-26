@@ -9,3 +9,6 @@
 !requirements.txt
 !run_menu.py
 !ultils.py
+!browser_automation.py
+!config.example.txt
+!.env.example
