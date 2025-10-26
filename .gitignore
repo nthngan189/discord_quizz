@@ -1,0 +1,7 @@
+# Bỏ qua tất cả các file
+*
+
+# Giữ lại các file cụ thể
+!.gitignore
+!README.md
+!quizz.py
