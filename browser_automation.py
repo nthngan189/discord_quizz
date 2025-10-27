@@ -1499,9 +1499,9 @@ class BrowserManager:                                                           
         
         finally:
             #Utility.wait_time(5, True)
-            self._log(profile_name, 'Đóng... wait')
-            Utility.wait_time(1, True)
-            driver.quit()
+            #self._log(profile_name, 'Đóng... wait')
+            #Utility.wait_time(1, True)
+            #driver.quit()
             # Giải phóng profile
             Utility.unlock_profile(path_lock)
             self._release_position(profile_name, row, col)
