@@ -26,6 +26,7 @@ BOT_ID = int(Utility.read_config('QUIZ_BOT_ID')[0])
 
 # ====== THIẾT LẬP TRÌNH DUYỆT ======
 driverList = []
+task_queue = queue.Queue()
 worker_queues = []
 worker_queues_lock = threading.Lock()
 class Setup:
@@ -42,7 +43,7 @@ class Auto:
         self.driver = node._driver
         self.node = node
         self.profile_name = profile.get('profile_name')
-        self.task_queue = queue.Queue()
+        #self.task_queue = queue.Queue()
     def is_login(self):
         user_name = self.node.get_text(By.XPATH, '//div[contains(@class, "panelTitleContainer")]')
         if user_name:
@@ -75,6 +76,11 @@ class Auto:
             Utility.wait_time(60)
             if not self.is_login():
                 return
+        else:
+            self_node = [self.driver, self.profile_name]
+            driverList.append(self_node)
+            return
+        '''
         # Đăng ký worker cho node này
         with worker_queues_lock:
             worker_queues.append(self.task_queue)
@@ -93,7 +99,7 @@ class Auto:
             except Exception as e:
                 self.node.log(f"Lỗi nghiêm trọng trong worker loop: {e}")
                 break
-            
+            '''
             
 
 
@@ -127,8 +133,8 @@ async def handle_quiz(author,question, description = None):
             print(f"\n ** Đáp án: --> {answer}\n")
             task_to_send = answer[0]
             with worker_queues_lock:
-                for queue in worker_queues:
-                    queue.put(task_to_send)
+                #for queue in worker_queues:
+                task_queue.put(task_to_send)
         else:
             print("Lỗi!")
     else:
@@ -139,8 +145,8 @@ async def handle_quiz(author,question, description = None):
             print(f"\n ** Đáp án: --> {answer}\n")
             task_to_send = answer[0]
             with worker_queues_lock:
-                for queue in worker_queues:
-                    queue.put(task_to_send)
+                #for queue in worker_queues:
+                task_queue.put(task_to_send)
         else:
             print("Lỗi!")
     await asyncio.sleep(1)
@@ -377,7 +383,19 @@ def run_terminal(profiles: list[dict], max_concurrent_profiles: int = 4, auto: b
                 exit()
             else:
                 Utility.print_section('LỖI: Lựa chọn không hợp lệ. Vui lòng thử lại...', "🛑")
-
+# Hàm chờ task
+def quiz_worker():
+    while True:
+        try:
+            answer_task = task_queue.get()
+            if answer_task is None:
+                print("Nhận tín hiệu dừng worker.")
+                break
+            click_quiz(answer_task)
+            task_queue.task_done()
+        except Exception as e:
+            print(f"Lỗi nghiêm trọng trong worker loop: {e}")
+            break
 
 
 if __name__ == '__main__':
@@ -415,6 +433,7 @@ if __name__ == '__main__':
             Utility.print_section("Bắt đầu quiz","✅")                
             # Dùng call_soon_threadsafe để set Event của asyncio từ một thread khác
             loop.call_soon_threadsafe(event.set)
+            quiz_worker()  # Bắt đầu worker chờ task
 
     @client.event
     async def on_ready():
