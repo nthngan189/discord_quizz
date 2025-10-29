@@ -43,6 +43,7 @@ async def on_ready():
     
 @client.event
 async def on_message(message): # Lắng nghe msg từ discord và lọc lấy msg cần dùng.
+    print(f"Start listening messages in channel")
     if message.channel.id == QUIZ_CHANNEL_ID:
         if message.author.id == QUIZ_BOT_ID or message.author.bot:
             if message.content:
@@ -102,7 +103,7 @@ def choose_quiz_bot_id():
         return None
     else:
             print("❌ Lựa chọn không hợp lệ, Bot = Test")
-            return 1335691906335772804
+            return 1161783017245773864
 
 # Hàm chính để lấy msg và trả về kết quả
 async def handle_quiz(question, description = None):

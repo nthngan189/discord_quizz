@@ -1482,9 +1482,9 @@ class BrowserManager:                                                           
                     self.SetupHandlerClass(node, profile)._run()
                 self._listen_for_enter(profile_name)
                 #Utility.wait_time(5, True)
-                self._log(profile_name, 'Đóng... wait')
                 Utility.wait_time(1, True)
                 driver.quit()
+                self._log(profile_name, 'Đóng trình duyệt')
             else:
                 # Nếu có AutoHandlerClass thì thực hiện
                 if self.AutoHandlerClass:
@@ -1498,10 +1498,9 @@ class BrowserManager:                                                           
             self._log(profile_name, str(e))
         
         finally:
-            #Utility.wait_time(5, True)
-            #self._log(profile_name, 'Đóng... wait')
-            #Utility.wait_time(1, True)
-            #driver.quit()
+            driver.quit()
+            self._log(profile_name, 'Đã đóng trình duyệt')
+            Utility.wait_time(1, True)
             # Giải phóng profile
             Utility.unlock_profile(path_lock)
             self._release_position(profile_name, row, col)
@@ -1543,6 +1542,7 @@ class BrowserManager:                                                           
                 else:
                     # Thời gian chờ check lại
                     Utility.wait_time(10, True)
+            
 
     def run_stop(self, profiles: list[dict]):
         '''
